@@ -18,7 +18,8 @@ var canvas = document.getElementById("canv"),
         "violet",
     ],
     blockWidth = 10,
-    score = 0;
+    score = 0,
+    speed = 60;
 
 canvas.style.margin = "0 auto";
 canvas.style.display = "block";
@@ -46,6 +47,18 @@ function printScore() {
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillText("Текущий счет: " + score, blockWidth + 2, blockWidth - 2);
+}
+
+function printSpeed() {
+    ctx.fillStyle = "blueviolet";
+    ctx.font = "18px Verdana";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "top";
+    ctx.fillText("Текущая скорость: " + speed, (width - blockWidth - 2), blockWidth - 2);
+    ctx.beginPath();
+    ctx.font = "14px Verdana";
+    ctx.fillText("(Клавиши 'i'/'d')", (width - blockWidth - 2), blockWidth*2 + 10);
+
 }
 
 // функция, выводящая сообщение об окончании игры при столкновении змейки со стенкой или с самой собой
@@ -121,7 +134,6 @@ Snake.prototype.draw = function () {
 
 // метод для проверки столкновения змейки со стенкой или с самой собой
 Snake.prototype.checkCollision = function (head) {
-    console.log(head);
     var topCollision = (head.row === 0),
         rightCollision = (head.col === width / blockWidth - 1),
         bottomCollision = (head.row === height / blockWidth - 1),
@@ -196,19 +208,32 @@ var apple = new Apple();
 apple.move();
 var snake = new Snake();
 
-var intervalId = setInterval(function () {
+function gameInit () {
     ctx.clearRect(blockWidth, blockWidth, width-blockWidth*2, height-blockWidth*2);
     snake.draw();
     snake.move();
     apple.draw();
     printScore();
-}, 100);
+    printSpeed();
+}
+
+var intervalId = setInterval(gameInit, speed);
 
 // обработчик события нажатия клавиши с вызовом метода setDirection()
 document.documentElement.addEventListener("keydown", function (e) {
     var newDirection = directions[e.keyCode];
     if (newDirection !== undefined) {
         snake.setDirection(newDirection);
+    }
+    console.log(e.keyCode);
+    if (e.keyCode === 73) {
+        speed -= 10;
+        clearInterval(intervalId);
+        intervalId = setInterval(gameInit, speed);
+    } else if (e.keyCode === 68) {
+        speed += 10;
+        clearInterval(intervalId);
+        intervalId = setInterval(gameInit, speed);
     }
 });
 
