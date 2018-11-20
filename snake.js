@@ -1,5 +1,6 @@
 var canvas = document.getElementById("canv"),
     ctx = canvas.getContext("2d"),
+    list = document.getElementById("list"),
     // объект для обработки нажатия клавиш управления
     directions = {
         38: "up",
@@ -19,7 +20,9 @@ var canvas = document.getElementById("canv"),
     ],
     blockWidth = 10,
     score = 0,
-    speed = 120;
+    speed = 150,
+    gameOverState = false
+;
 
 canvas.style.margin = "0 auto";
 canvas.style.display = "block";
@@ -33,7 +36,7 @@ function circle(x, y, r, fillCircle) {
 
 // функция, рисующая стенки игрового поля
 function drawBorders() {
-    ctx.fillStyle = "violet";
+    ctx.fillStyle = "darkslateblue";
     ctx.fillRect(0, 0, width, blockWidth);
     ctx.fillRect(0, 0, blockWidth, height);
     ctx.fillRect(width - blockWidth, 0, blockWidth, height);
@@ -54,29 +57,58 @@ function printSpeed() {
     ctx.font = "14px Verdana";
     ctx.textAlign = "right";
     ctx.textBaseline = "top";
-    ctx.fillText("Текущая скорость: " + Math.round(((1000/speed)*100)/100) + " клеток в секунду", (width - blockWidth - 2), blockWidth - 2);
+    ctx.fillText("Текущая скорость: каждые " + (speed*.1).toFixed(1) + " мс", (width - blockWidth - 2), blockWidth - 2);
     ctx.beginPath();
     ctx.font = "12px Verdana";
     ctx.fillText("(Клавиши 'i'/'d')", (width - blockWidth - 2), blockWidth*2 + 10);
 
 }
 
+function addScoreToStatistics() {
+    var newStatElem = document.createElement("li");
+    var options = {
+        hour: 'numeric',
+        minute: 'numeric',
+        second: "numeric"
+    };
+    newStatElem.innerHTML = new Date().toLocaleString("ru", options) + " &mdash; Количество очков: " + score;
+    list.appendChild(newStatElem);
+}
+
 // функция, выводящая сообщение об окончании игры при столкновении змейки со стенкой или с самой собой
 function gameOver() {
+    ctx.clearRect(blockWidth, blockWidth, width - blockWidth*2, height - blockWidth*2)
     ctx.fillStyle = "red";
     ctx.font = "70px Verdana";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("Game over!", width / 2, height / 2);
+    ctx.fillText("Конец игры!", width / 2, height / 2);
+    setTimeout(function () {
+        ctx.beginPath();
+        ctx.fillStyle = "red";
+        ctx.font = "30px Verdana";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("Ваш счёт: " + score + " очков!", width / 2, height / 2 + 40);
+    }, 1000);
+    setTimeout(function () {
+        ctx.beginPath();
+        ctx.fillStyle = "black";
+        ctx.font = "16px Verdana";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("Нажмите пробел, чтобы попробовать ещё раз!", width / 2, height / 2 + 80)
+    }, 2000);
+    addScoreToStatistics();
 }
 
 drawBorders();
 
 // конструктор для создания блоков
-var Block = function (col, row) {
+var Block = function (col, row, color) {
     this.col = col;
     this.row = row;
-    this.color = colors[Math.floor(Math.random() * colors.length)];
+    this.color = color ? color : colors[Math.floor(Math.random() * colors.length)];
 };
 
 // метод для рисования блока в виде квадратика
@@ -96,6 +128,10 @@ Block.prototype.equal = function (otherBlock) {
     return this.col === otherBlock.col && this.row === otherBlock.row;
 };
 
+Block.prototype.setColor = function (color) {
+    this.color = color
+};
+
 // конструктор для создания яблока
 var Apple = function () {
     this.position = new Block(Math.random()*(width/blockWidth-2)+1,Math.random()*(height/blockWidth-2)+1);
@@ -103,7 +139,7 @@ var Apple = function () {
 
 // метод для рисования яблока
 Apple.prototype.draw = function () {
-    this.position.drawCircle();
+    this.position.drawCircle(this.position.color);
 };
 
 // метод для случайного выбора новых координат яблока
@@ -153,6 +189,8 @@ Snake.prototype.move = function () {
     var head = this.segments[0];
     var newHead;
     this.direction = this.nextDirection;
+
+    // выбор места появление новой "головы"
     switch (this.direction) {
         case "up":
             newHead = new Block(head.col, head.row-1);
@@ -167,18 +205,41 @@ Snake.prototype.move = function () {
             newHead = new Block(head.col-1, head.row);
             break;
     }
+
+    // если голова сталкивается с стенкой или с туловищем - игра закончена
     if (this.checkCollision(newHead)) {
-        gameOver();
+        gameOverState = true;
+        snake.segments = snake.segments.slice(0, 3);
+        setTimeout(gameOver, 100);
         return;
     }
 
-    this.segments.unshift(newHead);
+    // пустой массив для хранения текущих цветов
+    var snakeColors = [];
+
+    // заполнение массива текущих цветов по порядку
+    for (var i = 0; i < this.segments.length; i++) {
+        snakeColors.push(this.segments[i].color);
+    }
+
     if (newHead.equal(apple.position)) {
+        // в случае поглощения яблока его цвет добавляется в начало массива цветов
+        snakeColors.unshift(apple.position.color);
         score++;
+        speed -= 2;
         apple.move();
     } else {
         this.segments.pop();
     }
+
+
+    this.segments.unshift(newHead);
+
+    // всем элементам обновленного массива сегментов змеи добавляется соответствующий цвет из массива цветов
+    for (var i = 0; i < this.segments.length; i++) {
+        this.segments[i].setColor(snakeColors[i]);
+    }
+
 };
 
 // метод установки направления движения змейки с блокировкой возможности смены направления на 180 градусов
@@ -197,9 +258,7 @@ Snake.prototype.setDirection = function (newDirection) {
             return;
             break;
     }
-
     this.nextDirection = newDirection;
-
 };
 
 // создание яблока и змейки
@@ -216,9 +275,14 @@ function gameInit () {
     printSpeed();
 }
 
+var timeoutId;
+
 function animateGame () {
     gameInit();
-    setTimeout(animateGame, speed)
+    if (gameOverState) {
+        return;
+    }
+    timeoutId = setTimeout(animateGame, speed)
 }
 
 animateGame();
@@ -229,11 +293,17 @@ document.documentElement.addEventListener("keydown", function (e) {
     if (newDirection !== undefined) {
         snake.setDirection(newDirection);
     }
-    console.log(e.keyCode);
     if (e.keyCode === 73) {
         speed -= 10;
     } else if (e.keyCode === 68) {
         speed += 10;
+    }
+    if (gameOverState && e.keyCode === 32) {
+        gameOverState = !gameOverState;
+        snake = new Snake;
+        animateGame();
+        speed = 150;
+        score = 0
     }
 });
 
