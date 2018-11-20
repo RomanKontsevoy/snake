@@ -19,7 +19,7 @@ var canvas = document.getElementById("canv"),
     ],
     blockWidth = 10,
     score = 0,
-    speed = 60;
+    speed = 120;
 
 canvas.style.margin = "0 auto";
 canvas.style.display = "block";
@@ -43,7 +43,7 @@ function drawBorders() {
 // функция, выводящая текст с текущим счетом
 function printScore() {
     ctx.fillStyle = "brown";
-    ctx.font = "18px Verdana";
+    ctx.font = "14px Verdana";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillText("Текущий счет: " + score, blockWidth + 2, blockWidth - 2);
@@ -51,19 +51,18 @@ function printScore() {
 
 function printSpeed() {
     ctx.fillStyle = "blueviolet";
-    ctx.font = "18px Verdana";
+    ctx.font = "14px Verdana";
     ctx.textAlign = "right";
     ctx.textBaseline = "top";
-    ctx.fillText("Текущая скорость: " + speed, (width - blockWidth - 2), blockWidth - 2);
+    ctx.fillText("Текущая скорость: " + Math.round(((1000/speed)*100)/100) + " клеток в секунду", (width - blockWidth - 2), blockWidth - 2);
     ctx.beginPath();
-    ctx.font = "14px Verdana";
+    ctx.font = "12px Verdana";
     ctx.fillText("(Клавиши 'i'/'d')", (width - blockWidth - 2), blockWidth*2 + 10);
 
 }
 
 // функция, выводящая сообщение об окончании игры при столкновении змейки со стенкой или с самой собой
 function gameOver() {
-    clearInterval(intervalId);
     ctx.fillStyle = "red";
     ctx.font = "70px Verdana";
     ctx.textAlign = "center";
@@ -217,7 +216,12 @@ function gameInit () {
     printSpeed();
 }
 
-var intervalId = setInterval(gameInit, speed);
+function animateGame () {
+    gameInit();
+    setTimeout(animateGame, speed)
+}
+
+animateGame();
 
 // обработчик события нажатия клавиши с вызовом метода setDirection()
 document.documentElement.addEventListener("keydown", function (e) {
@@ -228,12 +232,8 @@ document.documentElement.addEventListener("keydown", function (e) {
     console.log(e.keyCode);
     if (e.keyCode === 73) {
         speed -= 10;
-        clearInterval(intervalId);
-        intervalId = setInterval(gameInit, speed);
     } else if (e.keyCode === 68) {
         speed += 10;
-        clearInterval(intervalId);
-        intervalId = setInterval(gameInit, speed);
     }
 });
 
