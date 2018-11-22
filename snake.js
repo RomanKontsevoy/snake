@@ -1,16 +1,17 @@
 var canvas = document.getElementById("canv"),
     ctx = canvas.getContext("2d"),
-    list = document.getElementById("list"),
+
     // объект для обработки нажатия клавиш управления
     directions = {
         38: "up",
         39: "right",
         40: "down",
         37: "left",
-    },
-    width = canvas.width = 500,
-    height = canvas.height = 500,
-    // объект для цветов
+    };
+var width = canvas.width = 500;
+canvas.height = 500;
+var height = 350,
+// объект для цветов
     colors = [
         "green",
         "red",
@@ -20,9 +21,9 @@ var canvas = document.getElementById("canv"),
     ],
     blockWidth = 10,
     score = 0,
-    speed = 150,
-    gameOverState = false
-;
+    speed = 300,
+    gameOverState = false,
+    pause = false;
 
 canvas.style.margin = "0 auto";
 canvas.style.display = "block";
@@ -38,9 +39,12 @@ function circle(x, y, r, fillCircle) {
 function drawBorders() {
     ctx.fillStyle = "darkslateblue";
     ctx.fillRect(0, 0, width, blockWidth);
-    ctx.fillRect(0, 0, blockWidth, height);
-    ctx.fillRect(width - blockWidth, 0, blockWidth, height);
-    ctx.fillRect(0, height - blockWidth, width, height);
+    ctx.fillRect(0, 0, blockWidth, canvas.height);
+    ctx.fillRect(width - blockWidth, 0, blockWidth, canvas.height);
+    ctx.fillRect(0, height - blockWidth, width, blockWidth);
+    ctx.fillRect(0, canvas.height - blockWidth, width, blockWidth);
+    ctx.fillStyle = 'yellowgreen';
+    ctx.fillRect(blockWidth, height, width - blockWidth * 2, canvas.height - blockWidth - height);
 };
 
 // функция, выводящая текст с текущим счетом
@@ -49,7 +53,7 @@ function printScore() {
     ctx.font = "14px Verdana";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.fillText("Текущий счет: " + score, blockWidth + 2, blockWidth - 2);
+    ctx.fillText("Текущий счет: " + score, blockWidth + 4, height);
 }
 
 function printSpeed() {
@@ -57,52 +61,85 @@ function printSpeed() {
     ctx.font = "14px Verdana";
     ctx.textAlign = "right";
     ctx.textBaseline = "top";
-    ctx.fillText("Текущая скорость: каждые " + (speed*.1).toFixed(1) + " мс", (width - blockWidth - 2), blockWidth - 2);
+    ctx.fillText("Текущая скорость: каждые " + (speed * .1).toFixed(1) + " мс", (width - blockWidth - 4), height);
     ctx.beginPath();
+    ctx.fillStyle = "blue";
     ctx.font = "12px Verdana";
-    ctx.fillText("(Клавиши 'i'/'d')", (width - blockWidth - 2), blockWidth*2 + 10);
-
+    ctx.fillText("Управление стрелочками на клавиатуре", (width - blockWidth - 4), height + 30);
+    ctx.fillText("Клавиши I/D для ускорения/замедления", (width - blockWidth - 4), height + 50);
+    ctx.fillText("Пробел для паузы", (width - blockWidth - 4), height + 70);
 }
 
+var Stat = function (time, score) {
+    this.time = time;
+    this.score = score;
+};
+
+var statArray = [];
+
 function addScoreToStatistics() {
-    var newStatElem = document.createElement("li");
     var options = {
         hour: 'numeric',
         minute: 'numeric',
         second: "numeric"
     };
-    newStatElem.innerHTML = new Date().toLocaleString("ru", options) + " &mdash; Количество очков: " + score;
-    list.appendChild(newStatElem);
+    var now = new Date().toLocaleString("ru", options);
+    var newStatElem = new Stat(now, score);
+    statArray.push(newStatElem);
+    console.log(statArray);
+}
+
+// Функция сравнения
+function compareScore(statA, statB) {
+    return statA.score - statB.score;
+}
+
+// Функция рисования статистики
+function drawStat() {
+    ctx.strokeStyle = "green";
+    ctx.strokeRect(blockWidth + 4, height + 30, 200, 105);
+    ctx.font = "24px Verdana";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.strokeText("Статистика:", blockWidth + 30, height + 30);
+    if (statArray.length) {
+        statArray.sort(compareScore);
+        var number = 1;
+        for (let i = statArray.length - 1; i >= 0 && i > statArray.length - 6; i--) {
+            ctx.beginPath();
+            ctx.fillStyle = "green";
+            ctx.font = "12px Verdana";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "top";
+            ctx.fillText(number + ": " + statArray[i].time + " - " + statArray[i].score, blockWidth + 20, height + 40 + (15 * number));
+            number++;
+        }
+    }
 }
 
 // функция, выводящая сообщение об окончании игры при столкновении змейки со стенкой или с самой собой
 function gameOver() {
-    ctx.clearRect(blockWidth, blockWidth, width - blockWidth*2, height - blockWidth*2)
+    ctx.clearRect(blockWidth, blockWidth, width - blockWidth * 2, height - blockWidth * 2);
     ctx.fillStyle = "red";
     ctx.font = "70px Verdana";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("Конец игры!", width / 2, height / 2);
-    setTimeout(function () {
-        ctx.beginPath();
-        ctx.fillStyle = "red";
-        ctx.font = "30px Verdana";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.fillText("Ваш счёт: " + score + " очков!", width / 2, height / 2 + 40);
-    }, 1000);
-    setTimeout(function () {
-        ctx.beginPath();
-        ctx.fillStyle = "black";
-        ctx.font = "16px Verdana";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.fillText("Нажмите пробел, чтобы попробовать ещё раз!", width / 2, height / 2 + 80)
-    }, 2000);
+    ctx.beginPath();
+    ctx.fillStyle = "red";
+    ctx.font = "30px Verdana";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("Ваш счёт: " + score + " очков!", width / 2, height / 2 + 40);
+    ctx.beginPath();
+    ctx.fillStyle = "black";
+    ctx.font = "16px Verdana";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("Нажмите пробел, чтобы попробовать ещё раз!", width / 2, height / 2 + 80)
     addScoreToStatistics();
 }
 
-drawBorders();
 
 // конструктор для создания блоков
 var Block = function (col, row, color) {
@@ -120,7 +157,7 @@ Block.prototype.drawSquare = function () {
 // метод для рисования блока в виде крожочка
 Block.prototype.drawCircle = function () {
     ctx.fillStyle = this.color;
-    circle(this.col*blockWidth+(blockWidth/2), this.row*blockWidth+(blockWidth/2), blockWidth/2, true);
+    circle(this.col * blockWidth + (blockWidth / 2), this.row * blockWidth + (blockWidth / 2), blockWidth / 2, true);
 };
 
 // метод для проверки совпадения двух различных блоков
@@ -134,7 +171,7 @@ Block.prototype.setColor = function (color) {
 
 // конструктор для создания яблока
 var Apple = function () {
-    this.position = new Block(Math.random()*(width/blockWidth-2)+1,Math.random()*(height/blockWidth-2)+1);
+    this.position = new Block(Math.random() * (width / blockWidth - 2) + 1, Math.random() * (height / blockWidth - 2) + 1);
 };
 
 // метод для рисования яблока
@@ -144,9 +181,34 @@ Apple.prototype.draw = function () {
 
 // метод для случайного выбора новых координат яблока
 Apple.prototype.move = function () {
-    var randomCol = Math.floor(Math.random()*(width/blockWidth-2)+1),
-        randomRow = Math.floor(Math.random()*(height/blockWidth-2)+1);
+    var randomCol = Math.floor(Math.random() * (width / blockWidth - 2) + 1),
+        randomRow = Math.floor(Math.random() * (height / blockWidth - 2) + 1);
     this.position = new Block(randomCol, randomRow);
+};
+
+Apple.prototype.conflict = function (blocks) {
+    for (let i = 0; i < blocks.length; i++) {
+        if (this.position.col === blocks[i].col && this.position.row === blocks[i].row) {
+            // На змейке
+            console.log('На змейке');
+            return true;
+        }
+    }
+    // Не на змейке
+    console.log('Не на змейке');
+    return false;
+};
+
+Apple.prototype.beside = function (blocks) {
+    var xDistantion = this.position.col - blocks[0].col;
+    var yDistantion = this.position.row - blocks[0].row;
+    // var hypotenuse = Math.sqrt(Math.pow(xDistantion,2)+Math.pow(yDistantion,2));
+    var hypotenuse = Math.sqrt(xDistantion*xDistantion+yDistantion*yDistantion);
+    console.log(xDistantion);
+    console.log(yDistantion);
+    console.log(hypotenuse);
+
+    return hypotenuse;
 };
 
 // конструктор для создания змейки
@@ -193,16 +255,16 @@ Snake.prototype.move = function () {
     // выбор места появление новой "головы"
     switch (this.direction) {
         case "up":
-            newHead = new Block(head.col, head.row-1);
+            newHead = new Block(head.col, head.row - 1);
             break;
         case "right":
-            newHead = new Block(head.col+1, head.row);
+            newHead = new Block(head.col + 1, head.row);
             break;
         case "down":
-            newHead = new Block(head.col, head.row+1);
+            newHead = new Block(head.col, head.row + 1);
             break;
         case "left":
-            newHead = new Block(head.col-1, head.row);
+            newHead = new Block(head.col - 1, head.row);
             break;
     }
 
@@ -226,8 +288,30 @@ Snake.prototype.move = function () {
         // в случае поглощения яблока его цвет добавляется в начало массива цветов
         snakeColors.unshift(apple.position.color);
         score++;
-        speed -= 2;
-        apple.move();
+        if (speed > 250) {
+            speed -= 15;
+        } else if (speed > 220) {
+            speed -= 10;
+        } else if (speed > 200) {
+            speed -= 8;
+        } else if (speed > 180) {
+            speed -= 4;
+        } else if (speed > 160) {
+            speed -= 3;
+        } else if (speed > 150) {
+            speed -= 2;
+        } else {
+            speed -= 1;
+        }
+        console.log(apple.beside(snake.segments));
+        if (!apple.conflict(snake.segments)) {
+            apple.move();
+        } else {
+            while (!apple.conflict(snake.segments)) {
+                apple.move();
+            }
+        }
+
     } else {
         this.segments.pop();
     }
@@ -263,11 +347,14 @@ Snake.prototype.setDirection = function (newDirection) {
 
 // создание яблока и змейки
 var apple = new Apple();
-apple.move();
 var snake = new Snake();
 
-function gameInit () {
-    ctx.clearRect(blockWidth, blockWidth, width-blockWidth*2, height-blockWidth*2);
+apple.move();
+
+function gameInit() {
+    ctx.clearRect(0, 0, width, canvas.height);
+    drawBorders();
+    drawStat();
     snake.draw();
     snake.move();
     apple.draw();
@@ -277,7 +364,7 @@ function gameInit () {
 
 var timeoutId;
 
-function animateGame () {
+function animateGame() {
     gameInit();
     if (gameOverState) {
         return;
@@ -298,12 +385,20 @@ document.documentElement.addEventListener("keydown", function (e) {
     } else if (e.keyCode === 68) {
         speed += 10;
     }
+
     if (gameOverState && e.keyCode === 32) {
         gameOverState = !gameOverState;
         snake = new Snake;
         animateGame();
-        speed = 150;
+        speed = 300;
         score = 0
+    } else if (!gameOverState && e.keyCode === 32) {
+        if (!pause) {
+            clearTimeout(timeoutId);
+        } else {
+            animateGame();
+        }
+        pause = !pause;
     }
 });
 
