@@ -10,7 +10,7 @@ var canvas = document.getElementById("canv"),
     };
 var width = canvas.width = 500;
 canvas.height = 500;
-var height = 350,
+var height = canvas.height - 150,
 // объект для цветов
     colors = [
         "green",
@@ -86,7 +86,6 @@ function addScoreToStatistics() {
     var now = new Date().toLocaleString("ru", options);
     var newStatElem = new Stat(now, score);
     statArray.push(newStatElem);
-    console.log(statArray);
 }
 
 // Функция сравнения
@@ -171,7 +170,10 @@ Block.prototype.setColor = function (color) {
 
 // конструктор для создания яблока
 var Apple = function () {
-    this.position = new Block(Math.random() * (width / blockWidth - 2) + 1, Math.random() * (height / blockWidth - 2) + 1);
+    this.position = new Block(
+        Math.floor(Math.random() * (width / blockWidth - 2) + 1),
+        Math.floor(Math.random() * (height / blockWidth - 2) + 1)
+    )
 };
 
 // метод для рисования яблока
@@ -180,10 +182,17 @@ Apple.prototype.draw = function () {
 };
 
 // метод для случайного выбора новых координат яблока
-Apple.prototype.move = function () {
+Apple.prototype.move = function (blocks) {
     var randomCol = Math.floor(Math.random() * (width / blockWidth - 2) + 1),
         randomRow = Math.floor(Math.random() * (height / blockWidth - 2) + 1);
     this.position = new Block(randomCol, randomRow);
+    var near = this.beside(blocks) < 8;
+    console.log(near)
+    if (!this.conflict(blocks) && near) {
+        return;
+    } else {
+        this.move(blocks);
+    }
 };
 
 Apple.prototype.conflict = function (blocks) {
@@ -202,21 +211,21 @@ Apple.prototype.conflict = function (blocks) {
 Apple.prototype.beside = function (blocks) {
     var xDistantion = this.position.col - blocks[0].col;
     var yDistantion = this.position.row - blocks[0].row;
-    // var hypotenuse = Math.sqrt(Math.pow(xDistantion,2)+Math.pow(yDistantion,2));
-    var hypotenuse = Math.sqrt(xDistantion*xDistantion+yDistantion*yDistantion);
-    console.log(xDistantion);
-    console.log(yDistantion);
+    var hypotenuse = Math.sqrt(Math.pow(xDistantion, 2) + Math.pow(yDistantion, 2));
+    console.log("this.position.col: ", this.position.col);
+    console.log("this.position.row: ", this.position.row);
+    console.log("blocks[0].col: ", blocks[0].col);
+    console.log("blocks[0].row: ", blocks[0].row);
     console.log(hypotenuse);
-
     return hypotenuse;
 };
 
 // конструктор для создания змейки
 var Snake = function () {
     this.segments = [
-        new Block(7, 10),
-        new Block(6, 10),
-        new Block(5, 10)
+        new Block(7, 3),
+        new Block(6, 3),
+        new Block(5, 3)
     ];
     this.direction = "right";
     this.nextDirection = "right";
@@ -303,15 +312,7 @@ Snake.prototype.move = function () {
         } else {
             speed -= 1;
         }
-        console.log(apple.beside(snake.segments));
-        if (!apple.conflict(snake.segments)) {
-            apple.move();
-        } else {
-            while (!apple.conflict(snake.segments)) {
-                apple.move();
-            }
-        }
-
+        apple.move(this.segments);
     } else {
         this.segments.pop();
     }
@@ -347,16 +348,16 @@ Snake.prototype.setDirection = function (newDirection) {
 
 // создание яблока и змейки
 var apple = new Apple();
+;
 var snake = new Snake();
-
-apple.move();
+;
 
 function gameInit() {
     ctx.clearRect(0, 0, width, canvas.height);
     drawBorders();
     drawStat();
     snake.draw();
-    snake.move();
+    snake.move(snake.segments);
     apple.draw();
     printScore();
     printSpeed();
@@ -401,4 +402,3 @@ document.documentElement.addEventListener("keydown", function (e) {
         pause = !pause;
     }
 });
-
